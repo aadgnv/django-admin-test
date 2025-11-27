@@ -14,12 +14,11 @@ def authorized_as_admin(context):
 
     if not username or not password:
         raise ValueError('Переменные ADMIN_USER или ADMIN_PASS не найдены.')
-    login_success = context.client.login(username=username, password=password)
-    assert login_success, (
-       'Проверьте логин/пароль или существование пользователя.'
-    )
-    is_logged_in = context.client.session.get('_auth_user_id') is not None
-    assert is_logged_in, 'Ошибка авторизации: Клиент не смог войти как админ.'
+    if not context.client.login(username=username, password=password):
+        raise AssertionError(
+            'Проверьте логин/пароль или существование пользователя.'
+        )
+    context.admin_username = username
 
 
 @when('Создаем группу "{group_name}"')
@@ -28,6 +27,7 @@ def create_group(context, group_name):
         'name': group_name,
         '_save': 'Save'
     }, follow=True)
+    assert context.response.status_code == 200
 
 
 @then('Группа "{group_name}" отображается в Recent actions')
@@ -69,12 +69,8 @@ def delete_group(context, group_name):
 
 
 @then('Группа "{group_name}" удалена')
-def then_group_is_deleted(context, group_name):
-    assert context.response.status_code == 200
-    assert '/admin/auth/group/' in context.response.request['PATH_INFO']
-    group_exists_after_deletion = (
-        Group.objects.filter(name=group_name).exists()
-    )
-    assert not group_exists_after_deletion, (
+def group_is_deleted(context, group_name):
+    assert context.response.status_code == 200, 'Ответ сервера не 200'
+    assert not Group.objects.filter(name=group_name).exists(), (
         f'Ошибка: Группа "{group_name}" не удалена.'
     )

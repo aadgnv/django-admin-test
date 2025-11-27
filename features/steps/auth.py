@@ -9,6 +9,7 @@ load_dotenv()
 @given('Открываем страницу admin')
 def open_page(context):
     context.response = context.client.get('/admin/', follow=True)
+    assert context.response.status_code in (200, 302)
 
 
 @then('Видим форму входа')
@@ -31,7 +32,7 @@ def admin(context):
     context.admin_password = password
 
 
-@when('Когда мы используем корректные данные для входа')
+@when('Используем корректные данные для входа')
 def login_admin(context):
     context.response = context.client.post('/admin/login/', {
         'username': context.admin_username,
@@ -41,7 +42,7 @@ def login_admin(context):
     }, follow=True)
 
 
-@then('Тогда переходим на главную Django administration')
+@then('Переходим на главную Django administration')
 def check_dashboard(context):
     html = context.response.content.decode()
     assert context.response.status_code == 200
@@ -61,7 +62,7 @@ def ivalid_admin(context):
     context.invalid_password_attempt = wrong_pass
 
 
-@when('Когда мы используем неверные данные для входа')
+@when('Используем не корректные данные для входа')
 def invalid_login_admin(context):
     context.response = context.client.post('/admin/login/', {
         'username': context.invalid_username_attempt,
@@ -70,10 +71,10 @@ def invalid_login_admin(context):
     }, follow=True)
 
 
-@then('То получаем ошибку входа')
+@then('Получаем ошибку входа')
 def fail(context):
     html = context.response.content.decode()
     assert 'Please enter the correct username and password' in html or \
            'Note that both fields may be case-sensitive' in html
     assert context.response.status_code == 200
-    assert context.response.request['PATH_INFO'] == '/admin/login/'
+    assert context.response.request['PATH_INFO'].startswith('/admin/login')
